@@ -1,1 +1,59 @@
+import sqlite3
+import csv
 
+DB_NAME = 'phonebook.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, name TEXT, phone TEXT UNIQUE)')
+    conn.commit()
+    conn.close()
+
+def import_csv(filename):
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.executemany('INSERT OR REPLACE INTO contacts (name, phone) VALUES (?, ?)', reader)
+            conn.commit()
+            conn.close()
+            print(f"Данные из {filename} успешно импортированы.")
+    except Exception as e:
+        print(f"Ошибка при чтении CSV: {e}")
+
+def search(pattern):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # Поиск по части имени или номера (LIKE)
+    cursor.execute("SELECT * FROM contacts WHERE name LIKE ? OR phone LIKE ?", (f'%{pattern}%', f'%{pattern}%'))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
+def get_paged(limit, offset):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # ПАГИНАЦИЯ (LIMIT и OFFSET)
+    cursor.execute("SELECT * FROM contacts LIMIT ? OFFSET ?", (limit, offset))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
+def delete_contact(name):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM contacts WHERE name = ?", (name,))
+    conn.commit()
+    conn.close()
+    print(f"Контакт {name} удален.")
+
+# Пример работы программы
+if __name__ == "__main__":
+    init_db()
+    # Создай файл contacts.csv (Имя,Телефон) перед запуском
+    # import_csv('contacts.csv') 
+    
+    print("Поиск 'Daulet':", search('Daulet'))
+    print("Первые 5 контактов (пагинация):", get_paged(5, 0))
